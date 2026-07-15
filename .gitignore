@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+plex_compare.db
+plex_compare.db-wal
+plex_compare.db-shm
