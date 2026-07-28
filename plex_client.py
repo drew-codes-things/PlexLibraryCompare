@@ -1,4 +1,6 @@
 import os
+os.environ.setdefault("PLEXAPI_HEADER_DEVICE_NAME", "PlexCompareTool")
+os.environ.setdefault("PLEXAPI_HEADER_DEVICE", "PlexCompareTool")
 
 from plexapi.myplex import MyPlexAccount
 
