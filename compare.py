@@ -24,7 +24,6 @@ def to_lookup(scanned_shows):
 
 
 def find_episode_mismatches(low_seasons, high_seasons):
-    """For seasons present in both libraries, find episode numbers missing on either side."""
     low_by_number = {s["season_number"]: s for s in low_seasons}
     high_by_number = {s["season_number"]: s for s in high_seasons}
     common_seasons = sorted(set(low_by_number) & set(high_by_number))

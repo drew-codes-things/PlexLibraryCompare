@@ -3,6 +3,7 @@ import secrets
 import sys
 import threading
 from functools import wraps
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, render_template_string, request, session
@@ -457,7 +458,7 @@ COMPARISON_TABLE_TEMPLATE = r"""
         <td>{% for s in row.missing_in_low %}<span class="badge badge-missing">S{{ '%02d'|format(s) }}</span>{% endfor %}</td>
         <td><span class="status-pill status-{{ row.status }}">{{ row.status.replace('_', ' ') }}</span></td>
         <td>
-          <button type="button" class="btn btn-secondary" onclick="copyTitle({{ row.title|tojson }})">Copy</button>
+          <button type="button" class="btn btn-secondary" onclick='copyTitle({{ row.title|tojson }})'>Copy</button>
           {% if row.plex_url_low %}<a class="btn" href="{{ row.plex_url_low }}" target="_blank" rel="noopener">Low</a>{% endif %}
           {% if row.plex_url_high %}<a class="btn" href="{{ row.plex_url_high }}" target="_blank" rel="noopener">High</a>{% endif %}
         </td>
@@ -543,7 +544,7 @@ EPISODE_GAPS_TEMPLATE = r"""
         <td>{% for e in row.missing_in_high %}<span class="badge badge-missing">E{{ '%02d'|format(e) }}</span>{% endfor %}</td>
         <td>{% for e in row.missing_in_low %}<span class="badge badge-missing">E{{ '%02d'|format(e) }}</span>{% endfor %}</td>
         <td>
-          <button type="button" class="btn btn-secondary" onclick="copyTitle({{ row.title|tojson }})">Copy</button>
+          <button type="button" class="btn btn-secondary" onclick='copyTitle({{ row.title|tojson }})'>Copy</button>
           {% if row.plex_url_low %}<a class="btn" href="{{ row.plex_url_low }}" target="_blank" rel="noopener">Low</a>{% endif %}
           {% if row.plex_url_high %}<a class="btn" href="{{ row.plex_url_high }}" target="_blank" rel="noopener">High</a>{% endif %}
         </td>
@@ -719,13 +720,13 @@ def _run_scan_background():
 
 
 def _redirect_with_scan_flag(flag):
-    target = request.referrer or "/scan-status"
-    sep = "&" if "?" in target else "?"
-    return redirect(f"{target}{sep}scan={flag}")
+    page = urlsplit(request.referrer or "").path
+    if page not in {f"/{slug}" for slug, _ in NAV_TABS}:
+        page = "/scan-status"
+    return redirect(f"{page}?scan={flag}")
 
 
 def _start_background_scan():
-    """Kick off a scan in the background. Returns False if one is already running."""
     global _scan_in_progress
     with _scan_lock:
         if _scan_in_progress:

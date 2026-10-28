@@ -243,7 +243,6 @@ def get_comparisons(conn, run_id, statuses=None):
 
 
 def get_episode_mismatches(conn, run_id):
-    """Flatten per-show episode_mismatches into one row per (show, season) gap."""
     rows = conn.execute(
         "SELECT * FROM comparisons WHERE scan_run_id = ? AND episode_mismatches != '[]' ORDER BY title",
         (run_id,),
