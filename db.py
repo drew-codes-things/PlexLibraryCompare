@@ -4,7 +4,10 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+from dotenv import load_dotenv
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 DB_PATH = os.getenv("PLEX_COMPARE_DB_PATH", os.path.join(BASE_DIR, "plex_compare.db"))
 
 SCHEMA = """

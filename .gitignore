@@ -1,1 +1,11 @@
 __pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+plex_compare.db
+plex_compare.db-wal
+plex_compare.db-shm
+*.db

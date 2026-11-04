@@ -165,6 +165,7 @@ on a Task Scheduler/cron schedule instead (see [Windows Deployment](#windows-dep
 | `PORT` | `5001` | Port to bind the Flask server to |
 | `ALLOW_INSECURE` | `false` | Allow non-loopback bind without auth (reverse proxy setups only) |
 | `SESSION_COOKIE_SECURE` | `false` | Mark the session cookie `Secure` (only enable if served over HTTPS, e.g. behind a TLS-terminating reverse proxy) |
+| `SECRET_KEY` | _(random per start)_ | Flask session key. Set it to any long random string so the CSRF token behind **Scan Now** survives restarts |
 | `PLEX_COMPARE_DB_PATH` | `plex_compare.db` (next to `db.py`) | Override where the SQLite database file is stored |
 
 ---
