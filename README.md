@@ -34,7 +34,7 @@ libraries (anything with `.seasons()` in Plex) - not movie libraries.
 ```
 python app.py  ->  runs scan.py in the background (first run + "Scan Now")
                 ->  scan both Plex libraries -> compare seasons -> plex_compare.db
-                ->  serves web dashboard (5 tabs) reading plex_compare.db
+                ->  serves web dashboard (6 tabs) reading plex_compare.db
 ```
 
 ### scan.py
