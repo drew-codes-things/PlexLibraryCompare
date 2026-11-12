@@ -48,13 +48,17 @@ def auth_enabled():
     return bool(WEB_USERNAME and WEB_PASSWORD)
 
 
+def constant_time_equals(left, right):
+    return secrets.compare_digest(left.encode("utf-8"), right.encode("utf-8"))
+
+
 def requires_auth(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
         if not auth_enabled():
             return view_func(*args, **kwargs)
         auth = request.authorization
-        if auth and secrets.compare_digest(auth.username or "", WEB_USERNAME) and secrets.compare_digest(auth.password or "", WEB_PASSWORD):
+        if auth and constant_time_equals(auth.username or "", WEB_USERNAME) and constant_time_equals(auth.password or "", WEB_PASSWORD):
             return view_func(*args, **kwargs)
         return Response(
             "Authentication required",
@@ -88,7 +92,7 @@ def has_valid_csrf(submitted_token):
     expected = session.get("_csrf_token")
     if not expected or not submitted_token:
         return False
-    return secrets.compare_digest(expected, submitted_token)
+    return constant_time_equals(expected, submitted_token)
 
 
 @app.route("/health")
