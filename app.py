@@ -343,6 +343,11 @@ th:last-child, td:last-child { padding-right: 0; }
     input[type=text], input[type=search], .btn, td .btn, .nav-tab, .page-btn { height: var(--touch); }
     .page-btn { min-width: var(--touch); }
 }
+@media (max-width: 820px), (pointer: coarse) {
+    input[type=text], input[type=search] { font-size: 16px; }
+    .btn, .page-btn { min-height: 44px; }
+    .nav-tab { display: inline-flex; align-items: center; min-height: 44px; }
+}
 """
 
 TABLE_JS = """
