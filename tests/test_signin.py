@@ -229,9 +229,26 @@ def test_a_rebinding_host_name_gets_421(web):
     assert sign_in(attacker).status_code == 303
 
 
-def test_the_proxy_mode_answers_on_any_host_name(web, monkeypatch):
+def test_the_proxy_mode_keeps_the_host_check_so_a_rebinding_page_cannot_read(web, monkeypatch):
     monkeypatch.setattr(app, "ALLOW_INSECURE", True)
+    assert web.get(PAGE, base_url="http://127.0.0.1:5001").status_code == 200
+    assert web.get(PAGE, base_url="http://localhost:5001").status_code == 200
+    for path in (PAGE, PROGRESS, "/health"):
+        assert web.get(path, base_url="http://evil.example:5001").status_code == 421
+
+
+def test_the_proxy_mode_answers_on_the_allowed_host_names(web, monkeypatch):
+    monkeypatch.setattr(app, "ALLOW_INSECURE", True)
+    monkeypatch.setattr(app.OWN_SIGN_IN, "allowed_hosts", frozenset({"plex.example.com"}))
     assert web.get(PAGE, base_url="http://plex.example.com").status_code == 200
+    assert web.get(PAGE, base_url="http://localhost:5001").status_code == 421
+
+
+def test_the_basic_mode_answers_on_any_host_name(web, monkeypatch):
+    monkeypatch.setattr(app, "WEB_USERNAME", "basic-user")
+    monkeypatch.setattr(app, "WEB_PASSWORD", "a long basic password")
+    assert web.get("/health", base_url="http://plex.example.com").status_code == 200
+    assert web.get(PAGE, base_url="http://plex.example.com").status_code == 401
 
 
 def test_a_browser_that_signed_in_before_is_not_locked_out_by_others(web):

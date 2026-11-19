@@ -209,7 +209,11 @@ Other ways to sign in:
   values instead (no setup page, no lockout).
 - `ALLOW_INSECURE=true`: the app has no sign-in at all and leaves it to a
   reverse proxy in front that signs people in. Never set it on an address
-  other people can reach directly.
+  other people can reach directly. The host name check above stays on in
+  this mode, so a web page that rebinds its own name to your machine still
+  gets `421`. **Upgrading a proxy setup that already used
+  `ALLOW_INSECURE=true`:** put the host name the proxy sends in
+  `ALLOWED_HOSTS`, or every page answers `421`.
 
 ---
 
@@ -225,10 +229,10 @@ Other ways to sign in:
 | `WEB_PASSWORD` | _(empty)_ | HTTP Basic Auth password |
 | `BIND_HOST` | `127.0.0.1` | Host to bind the Flask server to |
 | `PORT` | `5001` | Port to bind the Flask server to |
-| `ALLOW_INSECURE` | `false` | Set `true` only behind a reverse proxy that signs people in: the app then has no sign-in of its own |
+| `ALLOW_INSECURE` | `false` | Set `true` only behind a reverse proxy that signs people in: the app then has no sign-in of its own but keeps the `ALLOWED_HOSTS` check |
 | `SECURE_COOKIES` | `auto` | The own sign-in's cookie is `Secure` except on plain `http` to `localhost`, `127.0.0.1` or `[::1]`; `true` or `false` force it |
 | `TRUSTED_PROXIES` | _(empty)_ | Own sign-in only: addresses or private networks of a reverse proxy in front, comma separated; their `X-Forwarded-For` gives the visitor's address to the lockout |
-| `ALLOWED_HOSTS` | _(empty)_ | Own sign-in only: the only host names the app answers on, comma separated (others get 421). Empty: `localhost`, `127.0.0.1`, `[::1]`, IP addresses and this machine's own name |
+| `ALLOWED_HOSTS` | _(empty)_ | Own sign-in and `ALLOW_INSECURE=true` (not Basic Auth): the only host names the app answers on, comma separated (others get 421). Empty: `localhost`, `127.0.0.1`, `[::1]`, IP addresses and this machine's own name |
 | `SESSION_COOKIE_SECURE` | `false` | Mark the session cookie `Secure` (only enable if served over HTTPS, e.g. behind a TLS-terminating reverse proxy) |
 | `SECRET_KEY` | _(random per start)_ | Flask session key and the key that signs the own sign-in's cookie. Set it to any long random string so the CSRF token behind **Scan Now** survives restarts. Without it the sign-in key is kept in `secret_key` next to `plex_compare.db`. With the own sign-in a key shorter than 32 bytes stops the app at start-up |
 | `PLEX_COMPARE_DB_PATH` | `plex_compare.db` (next to `db.py`) | Override where the SQLite database file is stored. The owner account (`owner.json`) and `secret_key` live in the same folder |
