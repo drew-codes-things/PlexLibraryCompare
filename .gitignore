@@ -9,3 +9,5 @@ plex_compare.db
 plex_compare.db-wal
 plex_compare.db-shm
 *.db
+owner.json
+secret_key

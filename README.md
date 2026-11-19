@@ -93,10 +93,8 @@ python scan.py
   once the scan finishes
 - Copy title (clipboard) and Open in Plex (direct deep link via
   `getWebURL()`) actions on every row
-- Optional HTTP Basic Auth via `WEB_USERNAME` / `WEB_PASSWORD` - leave both
-  blank to disable it entirely. The server **refuses to bind to a
-  non-loopback interface without auth** (set `ALLOW_INSECURE=true` only if a
-  reverse proxy handles auth)
+- Its own sign-in, on by default (see [First run and sign-in](#first-run-and-sign-in));
+  HTTP Basic Auth instead when `WEB_USERNAME` / `WEB_PASSWORD` are set
 - Security headers (CSP, `X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`) on every response; CSRF token on the scan-trigger form;
   a `/health` endpoint returns `{"status":"ok"}`
@@ -133,8 +131,7 @@ ALLOW_INSECURE=false
 
 `LOW_LIBRARY_NAME`/`HIGH_LIBRARY_NAME` can point at any two show libraries -
 e.g. `TV Shows` / `TV Shows - High` - not just anime. Leave `WEB_USERNAME`
-and `WEB_PASSWORD` empty to disable HTTP Basic Auth (fine when bound to
-`127.0.0.1`).
+and `WEB_PASSWORD` empty to use the app's own sign-in.
 
 ### 3. Start the app
 
@@ -142,12 +139,77 @@ and `WEB_PASSWORD` empty to disable HTTP Basic Auth (fine when bound to
 python app.py
 ```
 
-Then open `http://127.0.0.1:5001` in your browser. The first time you run
-this, there's no data yet, so it kicks off a scan in the background
+Then open `http://127.0.0.1:5001` in your browser and make the owner
+account (see below). The first time you run this, there's no data yet, so it kicks off a scan in the background
 automatically - refresh the page in a minute or two once it finishes. After
 that, use the **Scan Now** button whenever you want fresher data. That's the
 whole workflow - you never need to run `scan.py` by hand unless you want it
 on a Task Scheduler/cron schedule instead (see [Windows Deployment](#windows-deployment)).
+
+### First run and sign-in
+
+Plex Library Compare has its own sign-in, switched on by default (see
+"Other ways to sign in" below for the alternatives). There is one owner
+account and no sign-up page.
+
+1. Start it (`python app.py`) and open `http://127.0.0.1:5001`. With no
+   account yet every page goes to **Set up**.
+2. The app writes a one-time setup code to its log when it starts, a line
+   like `no owner account yet: open /setup and enter the setup code ...`.
+   Enter that code, a user name and a password (10 characters or more,
+   twice). The code stops anyone else who reaches the page first from
+   making the account, and it works once: if the owner file is ever
+   deleted, the next visit to **Set up** writes a new code to the log.
+3. After that, every page goes to **Sign in** until you sign in. A session
+   lasts 30 days. `/signout` signs out on every device.
+
+How it is protected:
+
+- The password is stored as an scrypt hash in `owner.json` next to
+  `plex_compare.db` (mode 600), never in plain text.
+- 5 wrong passwords or setup codes from one address within 15 minutes lock
+  that address out for the rest of the 15 minutes (`429`). Attempts sent
+  at once are counted before they are checked, IPv6 addresses count by
+  their `/64` network, and after 100 failures from everywhere within 15
+  minutes each address gets one try and each network three (IPv4 by `/24`,
+  IPv6 by `/48`). A right password from a locked address is refused too.
+- During such an attack one wrong password from a neighbour on the same
+  provider network does not keep your new browser out: that takes three
+  wrong passwords within 15 minutes from three of their addresses (IPv4)
+  or three of their home lines (IPv6, where a line's whole `/56` counts as
+  one address).
+- A browser that has signed in before keeps a signed device cookie and has
+  its own 5 tries, so a stranger who locks out your address (or the
+  address of the proxy in front) cannot lock you out of that browser.
+  During an attack from many networks that browser is the way in.
+  Making a new owner account ends every device cookie of the old one.
+- The session cookie is `HttpOnly`, `SameSite=Lax` and signed with the app's
+  secret key (`SECRET_KEY`, or `secret_key` next to `plex_compare.db`, made
+  on first start, mode 600). It is `Secure` everywhere except plain `http`
+  on `localhost`, `127.0.0.1` or `[::1]` (`SECURE_COOKIES=auto`). On a plain
+  `http` address on your home network the browser drops a `Secure` cookie
+  and the sign-in page says so: use https, or set `SECURE_COOKIES=false`
+  there.
+- Forget the password? Stop the app, delete `owner.json` next to
+  `plex_compare.db`, start it again and set up a new owner with the new
+  setup code from the log. Your scans stay.
+
+Behind a reverse proxy for https, with the own sign-in still on: list the
+proxy's address in `TRUSTED_PROXIES` so the lockout counts each visitor's
+address from `X-Forwarded-For` instead of the proxy's (the header is read
+only from those addresses), and put the public host name in
+`ALLOWED_HOSTS`. By default the own sign-in answers only on `localhost`,
+`127.0.0.1`, `[::1]`, IP addresses and this machine's own name; any other
+`Host` gets `421`, so a web page cannot reach a copy on your machine by
+DNS rebinding.
+
+Other ways to sign in:
+
+- `WEB_USERNAME` and `WEB_PASSWORD` set: HTTP Basic Auth with those two
+  values instead (no setup page, no lockout).
+- `ALLOW_INSECURE=true`: the app has no sign-in at all and leaves it to a
+  reverse proxy in front that signs people in. Never set it on an address
+  other people can reach directly.
 
 ---
 
@@ -159,14 +221,17 @@ on a Task Scheduler/cron schedule instead (see [Windows Deployment](#windows-dep
 | `PLEX_SERVER_NAME` | required | Name of your Plex server resource (as shown in your Plex account) |
 | `LOW_LIBRARY_NAME` | `Anime Shows` | First show library section name |
 | `HIGH_LIBRARY_NAME` | `Anime Shows - High` | Second show library section name |
-| `WEB_USERNAME` | _(empty)_ | HTTP Basic Auth username (leave blank to disable) |
+| `WEB_USERNAME` | _(empty)_ | HTTP Basic Auth username instead of the own sign-in (leave blank to use the own sign-in) |
 | `WEB_PASSWORD` | _(empty)_ | HTTP Basic Auth password |
 | `BIND_HOST` | `127.0.0.1` | Host to bind the Flask server to |
 | `PORT` | `5001` | Port to bind the Flask server to |
-| `ALLOW_INSECURE` | `false` | Allow non-loopback bind without auth (reverse proxy setups only) |
+| `ALLOW_INSECURE` | `false` | Set `true` only behind a reverse proxy that signs people in: the app then has no sign-in of its own |
+| `SECURE_COOKIES` | `auto` | The own sign-in's cookie is `Secure` except on plain `http` to `localhost`, `127.0.0.1` or `[::1]`; `true` or `false` force it |
+| `TRUSTED_PROXIES` | _(empty)_ | Own sign-in only: addresses or private networks of a reverse proxy in front, comma separated; their `X-Forwarded-For` gives the visitor's address to the lockout |
+| `ALLOWED_HOSTS` | _(empty)_ | Own sign-in only: the only host names the app answers on, comma separated (others get 421). Empty: `localhost`, `127.0.0.1`, `[::1]`, IP addresses and this machine's own name |
 | `SESSION_COOKIE_SECURE` | `false` | Mark the session cookie `Secure` (only enable if served over HTTPS, e.g. behind a TLS-terminating reverse proxy) |
-| `SECRET_KEY` | _(random per start)_ | Flask session key. Set it to any long random string so the CSRF token behind **Scan Now** survives restarts |
-| `PLEX_COMPARE_DB_PATH` | `plex_compare.db` (next to `db.py`) | Override where the SQLite database file is stored |
+| `SECRET_KEY` | _(random per start)_ | Flask session key and the key that signs the own sign-in's cookie. Set it to any long random string so the CSRF token behind **Scan Now** survives restarts. Without it the sign-in key is kept in `secret_key` next to `plex_compare.db`. With the own sign-in a key shorter than 32 bytes stops the app at start-up |
+| `PLEX_COMPARE_DB_PATH` | `plex_compare.db` (next to `db.py`) | Override where the SQLite database file is stored. The owner account (`owner.json`) and `secret_key` live in the same folder |
 
 ---
 
